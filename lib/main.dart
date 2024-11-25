@@ -45,15 +45,14 @@ class MyHomePage extends StatelessWidget {
         children: [
           const Text('A random idea:'),
           Text(appState.current.asLowerCase),
-          ElevatedButton(onPressed: onPressed(appState), child: const Text('Next'))
+          ElevatedButton(onPressed: ()=>{
+            appState.newWord()
+          }, child: const Text('Next'))
         ],
       ),
     );
   }
 
-  onPressed(MyAppState appState) {
-    appState.newWord();
-  }
 
 
 }
