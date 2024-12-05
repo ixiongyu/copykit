@@ -1,209 +1,73 @@
-import 'package:english_words/english_words.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:window_size/window_size.dart' as window_size;
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  print('当前运行目录: ${Directory.current.path}');
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 读取配置文件获取高度和宽度
+  final config = await _getConfiguredSize();
+
+  // 设置窗口大小
+  _setWindowSize(config['width'], config['height']);
+
+  runApp(MyApp());
+}
+
+// 读取配置文件宽度和高度
+Future<Map<String, double>> _getConfiguredSize() async {
+  const defaultWidth = 800.0;  // 默认宽度
+  const defaultHeight = 400.0; // 默认高度
+  const configFilePath = 'config.json';
+
+  try {
+    final file = File(configFilePath);
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+      return {
+        'width': (json['width'] ?? defaultWidth).toDouble(),
+        'height': (json['height'] ?? defaultHeight).toDouble(),
+      };
+    }
+  } catch (e) {
+    debugPrint('读取配置文件失败，使用默认大小: $e');
+  }
+  return {'width': defaultWidth, 'height': defaultHeight};
+}
+
+// 设置窗口大小
+void _setWindowSize(double? width, double? height) {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    window_size.getScreenList().then((screens) {
+      if (screens.isNotEmpty) {
+        final screen = screens.first;
+
+        window_size.setWindowFrame(Rect.fromLTWH(
+          0,
+          (screen.frame.height - height! ),
+          screen.frame.width,
+          height ?? screen.frame.height,
+        ));
+      }
+    });
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'copykit',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.redAccent),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('桌面端应用'),
         ),
-        home: const MyHomePage(),
-      ),
-    );
-  }
-}
-
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-  var favorites = <WordPair>[];
-
-  void newWord() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  void toggleFavorites() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
-}
-
-
-
-class FavoritesPage extends StatelessWidget {
-  const FavoritesPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
-    if (appState.favorites.isEmpty) {
-      return const Center(
-        child: Text('No favorites yet.'),
-      );
-    }
-    return ListView(children: [
-      Padding(padding: const EdgeInsets.all(20), child: Text('You have '
-          '${appState.favorites.length} favorites:'),),
-      for (var pair in appState.favorites)
-        ListTile(
-          leading: const Icon(Icons.favorite),
-          title: Text(pair.asLowerCase),
+        body: const Center(
+          child: Text('窗口宽度和高度由配置文件控制'),
         ),
-    ]);
-  }
-}
-
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = const GeneratorPage();
-        break;
-      case 1:
-        page =  const FavoritesPage();
-        break;
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
-
-    return LayoutBuilder(
-        builder: (context, constraints) {
-          return Scaffold(
-            body: Row(
-              children: [
-                SafeArea(
-                  child: NavigationRail(
-                    extended: constraints.maxWidth > 600,
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home),
-                        label: Text('Home'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.favorite),
-                        label: Text('Favorites'),
-                      ),
-                    ],
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (value) {
-                      setState(() {
-                        selectedIndex = value;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: Theme
-                        .of(context)
-                        .colorScheme
-                        .primaryContainer,
-                    child: page,
-
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-    );
-  }
-}
-
-class GeneratorPage extends StatelessWidget {
-  const GeneratorPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BigCard(pair: pair),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorites();
-                },
-                icon: Icon(icon),
-                label: const Text('Like'),
-              ),
-              const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.newWord();
-                },
-                child: const Text('Next'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.pair,
-  });
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-        color: theme.colorScheme.onPrimary);
-    return Card(
-      color: theme.colorScheme.primary,
-      elevation: 10,
-      child: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Text(pair.asLowerCase, style: style,),
       ),
     );
   }
