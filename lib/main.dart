@@ -47,6 +47,8 @@ class MyAppState extends ChangeNotifier {
 
 
 class FavoritesPage extends StatelessWidget {
+  const FavoritesPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
@@ -87,7 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
         page = const GeneratorPage();
         break;
       case 1:
-        page =  FavoritesPage();
+        page =  const FavoritesPage();
         break;
       default:
         throw UnimplementedError('no widget for $selectedIndex');
