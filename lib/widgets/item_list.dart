@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:palette_generator/palette_generator.dart';
 
-class ItemList extends StatelessWidget {
+class ItemList extends StatelessWidget with WidgetsBindingObserver{
   @override
   Widget build(BuildContext context) {
     return ListView(
